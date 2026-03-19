@@ -78,20 +78,11 @@ Select toolsets via URL query parameter: `?toolsets=logs,metrics,monitors,incide
 
 ## Usage Examples
 
-> "Show me error logs from service:api-gateway in the last hour"
-> → Uses `get_logs` with query filters
-
-> "Are there any triggered monitors for the payments service?"
-> → Uses `get_monitors` with service tag filter
-
-> "Show me p99 latency for web-app over the last 4 hours"
-> → Uses `list_metrics` to find metric name, then `get_metrics` for timeseries
-
-> "List active incidents"
-> → `list_incidents`
-
-> "Find slow spans for service:checkout taking over 5s"
-> → Uses `list_spans` with duration filter
+- **Error investigation:** *"Show me error logs from service:api-gateway in the last hour"* — uses `get_logs` with query filters
+- **Monitor status:** *"Are there any triggered monitors for the payments service?"* — uses `get_monitors` with service tag filter
+- **Metrics query:** *"Show me p99 latency for web-app over the last 4 hours"* — uses `list_metrics` then `get_metrics` for timeseries
+- **Incident response:** *"List active incidents"* — uses `list_incidents`
+- **Trace investigation:** *"Find slow spans for service:checkout taking over 5s"* — uses `list_spans` with duration filter
 
 ## Operational Runbooks
 
