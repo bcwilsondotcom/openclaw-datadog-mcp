@@ -16,7 +16,7 @@ jobs:
     name: Static Analysis (SAST)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan for hardcoded secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
@@ -27,7 +27,7 @@ jobs:
     name: Software Composition Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan with Trivy
         uses: aquasecurity/trivy-action@master
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create archive for scanning
         run: |
@@ -61,7 +61,7 @@ jobs:
     name: License Compliance
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Verify LICENSE file
         run: |
@@ -73,7 +73,7 @@ jobs:
     name: Supply Chain Security
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check for suspicious patterns
         run: |
