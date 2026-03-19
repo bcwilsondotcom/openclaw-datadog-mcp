@@ -21,10 +21,7 @@ jobs:
 
       - name: Validate YAML frontmatter
         run: |
-          # Extract and validate frontmatter
           head -50 SKILL.md | awk '/^---$/{c++} c==1{print} c==2{print; exit}' > /tmp/frontmatter.yml
-
-          # Check required fields
           grep -q "^name:" /tmp/frontmatter.yml || { echo "❌ Missing 'name' in frontmatter"; exit 1; }
           grep -q "^description:" /tmp/frontmatter.yml || { echo "❌ Missing 'description' in frontmatter"; exit 1; }
           echo "✅ Frontmatter valid"
@@ -62,7 +59,6 @@ jobs:
 
       - name: Check for secrets/credentials
         run: |
-          # Scan for hardcoded API keys, tokens, passwords
           PATTERNS='(DD_API_KEY|DD_APP_KEY|api[_-]?key|secret|password|token)\s*[:=]\s*["\x27][a-zA-Z0-9]{20,}'
           if grep -rPi "$PATTERNS" --include="*.md" --include="*.sh" --include="*.py" .; then
             echo "❌ Possible hardcoded credentials found"
@@ -72,7 +68,6 @@ jobs:
 
       - name: Validate markdown links
         run: |
-          # Check internal file references exist (skip http/https URLs and badge images)
           BROKEN=""
           for link in $(grep -roP '\]\((?!https?://|#)([^)]+)\)' SKILL.md README.md docs/*.md | grep -oP '\(([^)]+)\)' | tr -d '()'); do
             file="${link%%#*}"
@@ -86,7 +81,6 @@ jobs:
 
       - name: Check file sizes
         run: |
-          # SKILL.md should be under 10KB for reasonable context usage
           SIZE=$(wc -c < SKILL.md)
           if [ "$SIZE" -gt 10240 ]; then
             echo "⚠️ SKILL.md is ${SIZE} bytes (>10KB) — may consume too much context"
