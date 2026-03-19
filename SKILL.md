@@ -1,6 +1,16 @@
 ---
 name: datadog-mcp
 description: Datadog observability via the official MCP Server — query logs, traces, metrics, monitors, incidents, dashboards, hosts, synthetics, and workflows through Datadog's remote MCP endpoint. Use when investigating production issues, checking monitor status, searching logs/traces, querying metrics timeseries, managing incidents, or listing dashboards and synthetic tests. Supports both remote (Streamable HTTP) and local (stdio) MCP transports. Requires DD_API_KEY and DD_APP_KEY.
+homepage: https://github.com/bcwilsondotcom/openclaw-datadog-mcp
+metadata:
+  openclaw:
+    emoji: "🐕"
+    requires:
+      env:
+        - DD_API_KEY
+        - DD_APP_KEY
+      optional_env:
+        - DD_SITE
 ---
 
 # Datadog MCP Server
