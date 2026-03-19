@@ -28,7 +28,7 @@ mcporter add datadog \
   --url "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp" \
   --header "DD-API-KEY:$DD_API_KEY" \
   --header "DD-APPLICATION-KEY:$DD_APP_KEY"
-```
+```text
 
 To select specific toolsets, append `?toolsets=logs,metrics,monitors` to the URL.
 
@@ -45,7 +45,7 @@ npx datadog-mcp-server --apiKey "$DD_API_KEY" --appKey "$DD_APP_KEY" --site "$DD
 ```bash
 claude mcp add --transport http datadog-mcp \
   "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp?toolsets=core"
-```
+```text
 
 ## Available Toolsets
 
@@ -71,35 +71,35 @@ Select toolsets via URL query parameter: `?toolsets=logs,metrics,monitors,incide
 ```
 "Show me error logs from service:api-gateway in the last hour"
 → Uses get_logs with query filters
-```
+```text
 
 ### Check monitor status
 
 ```
 "Are there any triggered monitors for the payments service?"
 → Uses get_monitors with service tag filter
-```
+```text
 
 ### Query metrics
 
 ```
 "Show me p99 latency for web-app over the last 4 hours"
 → Uses list_metrics to find metric name, then get_metrics for timeseries
-```
+```text
 
 ### Incident response
 
 ```
 "List active incidents" → list_incidents
 "Get details on incident INC-1234" → get_incident
-```
+```text
 
 ### Trace investigation
 
 ```
 "Find slow spans for service:checkout taking over 5s"
 → Uses list_spans with duration filter
-```
+```text
 
 ## Operational Runbooks
 
