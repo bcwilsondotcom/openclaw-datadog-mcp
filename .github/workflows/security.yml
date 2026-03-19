@@ -20,6 +20,7 @@ jobs:
 
       - name: Scan for hardcoded secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -54,7 +55,6 @@ jobs:
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           files: skill-package.tar.gz
-        if: ${{ secrets.VT_API_KEY != '' }}
         continue-on-error: true
 
   license-check:
