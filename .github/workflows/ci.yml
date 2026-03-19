@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Skill
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SKILL.md exists
+        run: test -f SKILL.md
+
+      - name: Validate YAML frontmatter
+        run: |
+          # Extract and validate frontmatter
+          head -50 SKILL.md | awk '/^---$/{c++} c==1{print} c==2{print; exit}' > /tmp/frontmatter.yml
+          
+          # Check required fields
+          grep -q "^name:" /tmp/frontmatter.yml || { echo "❌ Missing 'name' in frontmatter"; exit 1; }
+          grep -q "^description:" /tmp/frontmatter.yml || { echo "❌ Missing 'description' in frontmatter"; exit 1; }
+          echo "✅ Frontmatter valid"
+
+      - name: Validate required files
+        run: |
+          MISSING=""
+          for f in SKILL.md README.md LICENSE; do
+            [ -f "$f" ] || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing:$MISSING"
+            exit 1
+          fi
+          echo "✅ All required files present"
+
+      - name: Validate references exist
+        run: |
+          for f in references/incident-response.md references/troubleshooting.md references/api-reference.md; do
+            [ -f "$f" ] || { echo "❌ Missing $f"; exit 1; }
+          done
+          echo "✅ All references present"
+
+      - name: Validate scripts are executable
+        run: |
+          for f in scripts/*.sh; do
+            [ -x "$f" ] || { echo "❌ $f not executable"; exit 1; }
+          done
+          echo "✅ Scripts executable"
+
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: scripts/
+
+      - name: Check for secrets/credentials
+        run: |
+          # Scan for hardcoded API keys, tokens, passwords
+          PATTERNS='(DD_API_KEY|DD_APP_KEY|api[_-]?key|secret|password|token)\s*[:=]\s*["\x27][a-zA-Z0-9]{20,}'
+          if grep -rPi "$PATTERNS" --include="*.md" --include="*.sh" --include="*.py" .; then
+            echo "❌ Possible hardcoded credentials found"
+            exit 1
+          fi
+          echo "✅ No hardcoded credentials"
+
+      - name: Validate markdown links
+        run: |
+          # Check internal file references exist
+          BROKEN=""
+          for link in $(grep -roP '\[.*?\]\(((?!http)[^)]+)\)' SKILL.md README.md | grep -oP '\(([^)]+)\)' | tr -d '()'); do
+            # Strip anchors
+            file="${link%%#*}"
+            [ -f "$file" ] || BROKEN="$BROKEN $link"
+          done
+          if [ -n "$BROKEN" ]; then
+            echo "❌ Broken links:$BROKEN"
+            exit 1
+          fi
+          echo "✅ All internal links valid"
+
+      - name: Check file sizes
+        run: |
+          # SKILL.md should be under 10KB for reasonable context usage
+          SIZE=$(wc -c < SKILL.md)
+          if [ "$SIZE" -gt 10240 ]; then
+            echo "⚠️ SKILL.md is ${SIZE} bytes (>10KB) — may consume too much context"
+            exit 1
+          fi
+          echo "✅ SKILL.md size: ${SIZE} bytes"
+
+  docs:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check markdown formatting
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: "**/*.md"
+          config: |
+            {
+              "MD013": false,
+              "MD033": false,
+              "MD041": false,
+              "MD024": false
+            }

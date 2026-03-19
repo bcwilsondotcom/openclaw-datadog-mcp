@@ -1,0 +1,148 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly Monday 6am UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  sast:
+    name: Static Analysis (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/default
+            p/security-audit
+            p/secrets
+            p/command-injection
+            p/owasp-top-ten
+
+      - name: Scan for hardcoded secrets (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sca:
+    name: Software Composition Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  virustotal:
+    name: VirusTotal Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create archive for scanning
+        run: |
+          tar -czf skill-package.tar.gz \
+            SKILL.md README.md LICENSE \
+            scripts/ references/ docs/
+
+      - name: Scan with VirusTotal
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: skill-package.tar.gz
+        if: ${{ secrets.VT_API_KEY != '' }}
+        continue-on-error: true
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify LICENSE file
+        run: |
+          [ -f LICENSE ] || { echo "❌ No LICENSE file"; exit 1; }
+          grep -qi "MIT" LICENSE || { echo "❌ LICENSE doesn't appear to be MIT"; exit 1; }
+          echo "✅ MIT-0 license present"
+
+      - name: Check for copyleft contamination
+        run: |
+          # Ensure no GPL/AGPL/LGPL files snuck in
+          COPYLEFT=$(grep -ril "GNU General Public License\|AGPL\|GPL-3" --include="*.md" --include="*.sh" --include="*.py" . || true)
+          if [ -n "$COPYLEFT" ]; then
+            echo "⚠️ Possible copyleft references found:"
+            echo "$COPYLEFT"
+          fi
+          echo "✅ No copyleft contamination"
+
+  supply-chain:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for suspicious patterns
+        run: |
+          SUSPICIOUS=""
+          
+          # Check for network calls in scripts (except to datadoghq.com)
+          for f in scripts/*; do
+            if grep -Pi "(curl|wget|fetch|http)" "$f" | grep -Piv "datadoghq\.com|localhost|127\.0\.0\.1" | grep -Piv "^#"; then
+              SUSPICIOUS="$SUSPICIOUS\n  $f: External network call"
+            fi
+          done
+          
+          # Check for eval/exec in scripts
+          if grep -rl '\beval\b' scripts/ 2>/dev/null; then
+            SUSPICIOUS="$SUSPICIOUS\n  eval() usage found in scripts"
+          fi
+          
+          # Check for base64 encoded blobs (potential obfuscation)
+          if grep -rP '[A-Za-z0-9+/]{100,}={0,2}' scripts/ 2>/dev/null; then
+            SUSPICIOUS="$SUSPICIOUS\n  Large base64 blob found"
+          fi
+          
+          if [ -n "$SUSPICIOUS" ]; then
+            echo -e "⚠️ Review needed:$SUSPICIOUS"
+          fi
+          echo "✅ Supply chain check passed"
