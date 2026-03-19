@@ -72,10 +72,9 @@ jobs:
 
       - name: Validate markdown links
         run: |
-          # Check internal file references exist
+          # Check internal file references exist (skip http/https URLs and badge images)
           BROKEN=""
-          for link in $(grep -roP '\[.*?\]\(((?!http)[^)]+)\)' SKILL.md README.md | grep -oP '\(([^)]+)\)' | tr -d '()'); do
-            # Strip anchors
+          for link in $(grep -roP '\]\((?!https?://|#)([^)]+)\)' SKILL.md README.md docs/*.md | grep -oP '\(([^)]+)\)' | tr -d '()'); do
             file="${link%%#*}"
             [ -f "$file" ] || BROKEN="$BROKEN $link"
           done
@@ -105,10 +104,3 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
           globs: "**/*.md"
-          config: |
-            {
-              "MD013": false,
-              "MD033": false,
-              "MD041": false,
-              "MD024": false
-            }

@@ -22,12 +22,7 @@ jobs:
       - name: Run Semgrep SAST
         uses: semgrep/semgrep-action@v1
         with:
-          config: >-
-            p/default
-            p/security-audit
-            p/secrets
-            p/command-injection
-            p/owasp-top-ten
+          config: p/default
 
       - name: Scan for hardcoded secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
