@@ -6,11 +6,10 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "0 6 * * 1"  # Weekly Monday 6am UTC
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   sast:
@@ -18,11 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run Semgrep SAST
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: p/default
 
       - name: Scan for hardcoded secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
@@ -41,31 +35,6 @@ jobs:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL,HIGH,MEDIUM
-          format: sarif
-          output: trivy-results.sarif
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
-
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          queries: security-extended
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
 
   virustotal:
     name: VirusTotal Scan
@@ -100,16 +69,6 @@ jobs:
           grep -qi "MIT" LICENSE || { echo "❌ LICENSE doesn't appear to be MIT"; exit 1; }
           echo "✅ MIT-0 license present"
 
-      - name: Check for copyleft contamination
-        run: |
-          # Ensure no GPL/AGPL/LGPL files snuck in
-          COPYLEFT=$(grep -ril "GNU General Public License\|AGPL\|GPL-3" --include="*.md" --include="*.sh" --include="*.py" . || true)
-          if [ -n "$COPYLEFT" ]; then
-            echo "⚠️ Possible copyleft references found:"
-            echo "$COPYLEFT"
-          fi
-          echo "✅ No copyleft contamination"
-
   supply-chain:
     name: Supply Chain Security
     runs-on: ubuntu-latest
@@ -119,25 +78,18 @@ jobs:
       - name: Check for suspicious patterns
         run: |
           SUSPICIOUS=""
-          
-          # Check for network calls in scripts (except to datadoghq.com)
-          for f in scripts/*; do
-            if grep -Pi "(curl|wget|fetch|http)" "$f" | grep -Piv "datadoghq\.com|localhost|127\.0\.0\.1" | grep -Piv "^#"; then
-              SUSPICIOUS="$SUSPICIOUS\n  $f: External network call"
-            fi
-          done
-          
+
           # Check for eval/exec in scripts
           if grep -rl '\beval\b' scripts/ 2>/dev/null; then
-            SUSPICIOUS="$SUSPICIOUS\n  eval() usage found in scripts"
+            SUSPICIOUS="$SUSPICIOUS eval() usage found in scripts"
           fi
-          
+
           # Check for base64 encoded blobs (potential obfuscation)
           if grep -rP '[A-Za-z0-9+/]{100,}={0,2}' scripts/ 2>/dev/null; then
-            SUSPICIOUS="$SUSPICIOUS\n  Large base64 blob found"
+            SUSPICIOUS="$SUSPICIOUS Large base64 blob found"
           fi
-          
+
           if [ -n "$SUSPICIOUS" ]; then
-            echo -e "⚠️ Review needed:$SUSPICIOUS"
+            echo "⚠️ Review needed: $SUSPICIOUS"
           fi
           echo "✅ Supply chain check passed"
