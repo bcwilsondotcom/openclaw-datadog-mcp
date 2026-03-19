@@ -21,9 +21,9 @@ Query Datadog observability data through the official MCP Server.
 
 | Variable | Required | Description |
 |---|---|---|
-| `DD_API_KEY` | ✅ | Datadog API key (from app.datadoghq.com → Organization Settings → API Keys) |
+| `DD_API_KEY` | ✅ | Datadog API key (Organization Settings → API Keys) |
 | `DD_APP_KEY` | ✅ | Datadog Application key (Organization Settings → Application Keys) |
-| `DD_SITE` | Optional | Datadog site (default: `datadoghq.com`). Use `us5.datadoghq.com`, `datadoghq.eu`, `ap1.datadoghq.com`, etc. |
+| `DD_SITE` | Optional | Datadog site (default: `datadoghq.com`) |
 
 ## Setup
 
@@ -32,13 +32,12 @@ Query Datadog observability data through the official MCP Server.
 Datadog hosts the MCP server — no local install needed.
 
 ```bash
-# Configure via mcporter
 mcporter add datadog \
   --transport http \
   --url "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp" \
   --header "DD-API-KEY:$DD_API_KEY" \
   --header "DD-APPLICATION-KEY:$DD_APP_KEY"
-```text
+```
 
 To select specific toolsets, append `?toolsets=logs,metrics,monitors` to the URL.
 
@@ -47,7 +46,10 @@ To select specific toolsets, append `?toolsets=logs,metrics,monitors` to the URL
 Use the community `datadog-mcp-server` npm package:
 
 ```bash
-npx datadog-mcp-server --apiKey "$DD_API_KEY" --appKey "$DD_APP_KEY" --site "$DD_SITE"
+npx datadog-mcp-server \
+  --apiKey "$DD_API_KEY" \
+  --appKey "$DD_APP_KEY" \
+  --site "$DD_SITE"
 ```
 
 ### Option C: Claude Code / Codex CLI
@@ -55,7 +57,7 @@ npx datadog-mcp-server --apiKey "$DD_API_KEY" --appKey "$DD_APP_KEY" --site "$DD
 ```bash
 claude mcp add --transport http datadog-mcp \
   "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp?toolsets=core"
-```text
+```
 
 ## Available Toolsets
 
@@ -74,53 +76,30 @@ claude mcp add --transport http datadog-mcp \
 
 Select toolsets via URL query parameter: `?toolsets=logs,metrics,monitors,incidents`
 
-## Usage Patterns
+## Usage Examples
 
-### Investigate errors
+> "Show me error logs from service:api-gateway in the last hour"
+> → Uses `get_logs` with query filters
 
-```
-"Show me error logs from service:api-gateway in the last hour"
-→ Uses get_logs with query filters
-```text
+> "Are there any triggered monitors for the payments service?"
+> → Uses `get_monitors` with service tag filter
 
-### Check monitor status
+> "Show me p99 latency for web-app over the last 4 hours"
+> → Uses `list_metrics` to find metric name, then `get_metrics` for timeseries
 
-```
-"Are there any triggered monitors for the payments service?"
-→ Uses get_monitors with service tag filter
-```text
+> "List active incidents"
+> → `list_incidents`
 
-### Query metrics
-
-```
-"Show me p99 latency for web-app over the last 4 hours"
-→ Uses list_metrics to find metric name, then get_metrics for timeseries
-```text
-
-### Incident response
-
-```
-"List active incidents" → list_incidents
-"Get details on incident INC-1234" → get_incident
-```text
-
-### Trace investigation
-
-```
-"Find slow spans for service:checkout taking over 5s"
-→ Uses list_spans with duration filter
-```text
+> "Find slow spans for service:checkout taking over 5s"
+> → Uses `list_spans` with duration filter
 
 ## Operational Runbooks
 
-For common operational workflows, see:
 - `references/incident-response.md` — step-by-step incident triage via MCP
 - `references/troubleshooting.md` — log/trace/metric correlation patterns
 - `references/api-reference.md` — complete tool parameters and response schemas
 
 ## Multi-Site Support
-
-Datadog operates in multiple regions. Set `DD_SITE` to your org's site:
 
 | Region | Site |
 |---|---|
